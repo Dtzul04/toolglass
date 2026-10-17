@@ -1,6 +1,6 @@
 # Toolglass code map
 
-Mapped at commit: `b7f874e` (2026-10-18), branch `redesign/foundation`. Includes `catalog.ts`, `seo.ts`, and the chmod and case-converter tools.
+Mapped at commit: `02a69e5` (`main`, 2026-10-18) plus branch `redesign/design-system` (Phases 1 and 2 of `docs/PLAN.md`).
 
 Check for drift before trusting this file: `git diff --stat 18d4d8d..HEAD -- src`
 
@@ -11,8 +11,10 @@ Numbers in parentheses are line counts. Use them to judge read cost.
 ```
 index.html
   src/main.tsx (17)            legacy /#/ redirect, StrictMode > BrowserRouter > App
-    src/App.tsx (225)          ToastProvider > Shell (nav, main, footer) > ErrorBoundary > Routes
-      /                        pages/Landing.tsx
+    src/App.tsx                MotionConfig > ToastProvider > Shell (header, main, footer) > ErrorBoundary > Routes
+      /                        pages/Home.tsx
+      /tools                   pages/ToolsHub.tsx
+      /about                   pages/About.tsx
       /tools/:slug             pages/ToolPage.tsx  -> toolBySlug(slug) -> lazy Component
       *                        pages/NotFound.tsx
     CommandPalette             sibling of Shell, opened by Ctrl/Cmd+K
@@ -33,7 +35,7 @@ index.html
 | `vite.config.ts` | `base: '/'`. PWA plugin (autoUpdate, precaches woff2). `seoPages` plugin writes per-page HTML, `404.html`, and `sitemap.xml` from `src/seo.ts` after build. Vitest config: jsdom, globals, `src/**/*.test.{ts,tsx}`. |
 | `tsconfig.json` | strict, noUnusedLocals, noUnusedParameters, `include: ["src"]`. |
 | `eslint.config.js` (26) | Flat config. Several `react-hooks/*` rules turned off (set-state-in-effect, purity, refs, error-boundaries, set-state-in-render). |
-| `index.html` (39) | Meta, OG tags, JSON-LD. Fonts are self-hosted (see `index.css`). |
+| `index.html` | Meta, OG tags, JSON-LD, pre-paint theme script. Fonts are self-hosted Geist and Geist Mono (see `index.css`). |
 | `.github/workflows/ci-cd.yml` | `verify` job: `npm ci`, lint, build, test, upload Pages artifact. `deploy` job: Pages, main only; it alone has `pages`/`id-token` write. |
 | `public/` | favicon.svg, icon-192.png, icon-512.png, og-image.png, robots.txt, sitemap.xml. |
 | `README.md` (112), `ROADMAP.md` (442), `SECURITY.md`, `CODE_OF_CONDUCT.md`, `.github/CONTRIBUTING.md` (96) | Human docs. ROADMAP is a 20-day plan; days 1-15 done, 16-20 open. |
@@ -42,18 +44,25 @@ index.html
 
 | File | Exports | Notes |
 |---|---|---|
-| `App.tsx` (225) | `default App` | `InstallPwaButton` L14-54, `Shell` L56-193 (skip link, nav, footer with "Local Usage Stats" checkbox), `App` L195-225 (Ctrl/Cmd+K handler, routes). |
+| `App.tsx` | `default App` | Meta effect on navigation, Ctrl/Cmd+K handler, routes (`/`, `/tools`, `/tools/:slug`, `*`). `MotionConfig reducedMotion="user"`. |
 | `main.tsx` (17) | none | Mount point. Redirects legacy hash URLs. |
 | `seo.ts` | `SITE_URL`, `HOME`, `toolPage`, `allPages`, `applyMeta`, `applyMetaToDocument`, `sitemapXml` | Page-meta helpers. `applyMeta` rewrites HTML at build time; `applyMetaToDocument` updates title, description, social tags, and canonical on client-side navigation (App effect). Has a test. |
-| `index.css` (281) | none | `:root` light tokens L1-47, dark tokens L49-88, view transitions L108-117, `.bg-orb`, `.glass`, `.glass-strong`, `.mono`, `.gradient-text`, `.sr-only`, focus rings, reduced-motion block L223. |
+| `index.css` | none | Design tokens (canvas, ink, one accent, status, 3 glass surfaces, 3 elevations, type scale, 4px space scale, radii, motion), dark overrides, legacy aliases for old token names, base styles, ambient light (`body::before`) and grain (`body::after`), focus, scrollbars, `.glass`, `.container`, `.lift`, shell classes (`.nav-link`, `.nav-btn`, `.hide-sm`, `.skip-link`). |
 | `lib/cn.ts` (3) | `cn(...parts)` | Joins truthy class names. |
+| `lib/motion.ts` | `EASE_OUT`, `spring`, `fadeUp`, `fade`, `stagger()` | Shared framer-motion presets. |
+| `lib/platform.ts` | `IS_MAC`, `shortcut(key)` | Shortcut labels per OS. |
+| `lib/search.ts` | `searchTools(tools, query)` | Word-AND ranking over title, keywords, replaces, description; accent-insensitive. Used by hub, hero search, and command palette. Has a test. |
+| `lib/listStore.ts` | `createListStore(key, max)` | Shared localStorage-backed string list (`useSyncExternalStore`). Backs recents and favorites. Has a test. |
+| `lib/privacy.ts` | `countThirdParty` | Used by `PrivacyMeter`. Has a test. |
 | `view-transitions.d.ts` (10) | none | Types for `document.startViewTransition`. |
 
 ### src/pages
 
 | File | Notes |
 |---|---|
-| `Landing.tsx` (272) | `LISTED` L8-15 maps category name to slugs; `CATEGORIES` L18-19 appends an "Other" group for any registered slug not listed. `RecentPill` L21-45. Category filter persisted in localStorage. |
+| `Home.tsx` | Six acts: `Hero` (copy, `HeroSearch`, lazy `GlassScene` with a logo poster until the first frame), `Collapse` (pinned 340vh scene: clutter cards pulled into the glass, then a real toolbar; `CollapseStill` for reduced motion), `ForEveryone` (audience switch + tool cards), `Proof` (live third-party request count), `Ending`. Scroll maps use `useRange` (JS-computed; see Gotchas). |
+| `ToolsHub.tsx` | `/tools`. Search, category chips, audience switch (all in the URL: `q`, `cat`, `for`), favorites rail (drag to reorder), recents rail, grouped grid, empty state linking to a tool request. Has a test. |
+| `About.tsx` | `/about`. Privacy model, live meter, table of everything stored locally with a "clear all" button, open source links. |
 | `ToolPage.tsx` (154) | `Loader` L19-128 (Suspense fallback). `ToolPage` L131-154: unknown slug renders `NotFound`, else `ErrorBoundary > Suspense > Component`. Calls `addRecent(slug)`. |
 | `NotFound.tsx` (377) | Props `attemptedSlug`, `isToolNotFound`. Suggests tools; default suggestions hardcoded at L60 (`timestamp`, `jwt`, `password`). Has a test. |
 
@@ -61,6 +70,11 @@ index.html
 
 | File | Notes |
 |---|---|
+| `home/GlassScene.tsx` | Lazy three.js scene: two `MeshPhysicalMaterial` panes (transmission, dispersion) refracting a ring of glyph tiles and a light disc. Time-based animation, pointer parallax, scroll progress prop, pauses offscreen/hidden, one static frame for reduced motion, lower DPR on modest hardware, disposes everything on unmount. |
+| `home/HeroSearch.tsx` | ARIA combobox over `searchTools`; Enter opens the highlighted tool. |
+| `Shell.tsx` | `Shell`, `Kbd`. Sticky glass header (logo, Home/Tools nav with sliding indicator, search, install, theme switch), footer (privacy meter, usage-count opt-out, GitHub). |
+| `Logo.tsx` | Two-pane glass mark; mirrors `public/favicon.svg`. |
+| `PrivacyMeter.tsx` | Live count of requests to other origins via `PerformanceObserver` (Resource Timing). |
 | `ToolLayout.tsx` (129) | Wraps every tool. Takes only `children`. Backspace outside INPUT/TEXTAREA navigates to `/` (L19-31). |
 | `CommandPalette.tsx` (463) | Props `open`, `onClose`. Filters `tools` from registry. Arrow keys, Enter, Escape. |
 | `ErrorBoundary.tsx` (344) | Class component. Optional prop `toolTitle`. Has a test. |
@@ -70,8 +84,9 @@ index.html
 | `ui/CopyButton.tsx` (55) | Props `value`, `label`, `size`, `disabled`. Copies, toasts, and calls `increment()` for the current slug. |
 | `ui/GlassCard.tsx` (21) | `motion.div` with `.glass` or `.glass-strong` (`strong` prop), `padding`. |
 | `ui/Toast.tsx` (105) | `ToastProvider`, `useToast()` returns `{ push(message, kind?, id?) }`. Kinds: success, error, info. Passing an existing id updates that toast. |
-| `ui/ToolCard.tsx` (88) | Landing card for one `ToolMeta`. Shows usage count when stats are enabled. |
-| `ui/ThemeToggle.tsx` | Cycles Auto → Light → Dark. Circle reveal via View Transitions when the visible theme changes. |
+| `ui/ToolCard.tsx` | Card for one `ToolMeta`: icon, title, short, "Instead of …" (`replaces`), usage count, favorite star (stretched link + separate button). `compact` variant. |
+| `ui/ThemeToggle.tsx` | Auto / Light / Dark segmented switch. Circle reveal from the clicked button via View Transitions (skipped for reduced motion). |
+| `ui/Segmented.tsx` | Generic radio-group pill with sliding indicator and arrow-key navigation. |
 
 ### src/hooks
 
@@ -125,7 +140,8 @@ Tests (9 files): `components/ErrorBoundary.test.tsx`, `pages/NotFound.test.tsx`,
 
 ## Conventions
 
-- Inline styles with CSS variables. Common tokens: `--ink`, `--ink-soft`, `--ink-mute`, `--accent`, `--grad`, `--grad-soft`, `--glass-bg`, `--glass-border`, `--surface-input`, `--surface-button-off`, `--surface-nav-item`, `--divider`, `--kbd-bg`, `--kbd-border`, `--font-sans`, `--font-mono`, `--radius`, `--radius-sm`, `--radius-lg`.
+- Inline styles with CSS variables. New code uses the design tokens: `--canvas`, `--ink`, `--ink-soft`, `--ink-mute`, `--accent`, `--accent-ink`, `--accent-soft`, `--accent-ring`, `--status-*`, `--surface-1/2/3`, `--border`, `--glass-border`, `--edge`, `--e1/2/3`, `--blur`, `--t-*`, `--s-*`, `--radius*`, `--ease-out`, `--dur-*`. Older names (`--glass-bg`, `--surface-input`, `--divider`, ...) are aliases kept for existing tools. Never hard-code hex colors.
+- Design rules: one accent (cobalt), no gradient text, no emoji as icons (use `lucide-react`), no em dashes in visible copy, motion under 300 ms with `--ease-out`.
 - Tool body layout: `<div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>` with `Field`, `Button`, `Output`.
 - Errors go to `useToast().push(message, 'error')`.
 - Usage count: `CopyButton` increments automatically. Tools with other primary actions call `useToolStats(slug).increment()` themselves (color, timestamp, api-tester).
@@ -139,7 +155,7 @@ Tests (9 files): `components/ErrorBoundary.test.tsx`, `pages/NotFound.test.tsx`,
 | `toolglass_recent_tools` | local | `hooks/useRecentTools.ts:3` |
 | `toolglass_stats` | local | `hooks/useToolStats.ts:3` |
 | `toolglass_telemetry_enabled` | local | `hooks/useToolStats.ts:4` |
-| `toolglass_active_category` | local | `pages/Landing.tsx:58` |
+| `toolglass_favorites` | local | `hooks/useFavorites.ts` |
 | `toolglass_saved_requests` | local | `tools/curl-to-fetch/curlSecurity.ts:56`, also literal in `CurlTool.tsx` |
 | `toolglass_request_history` | local | `tools/curl-to-fetch/curlSecurity.ts:57`, also literal in `CurlTool.tsx` |
 | `tg_ts_history` | local | `tools/timestamp/TimestampTool.tsx:277` |
@@ -163,6 +179,8 @@ Only `fetch` calls in the app: `tools/curl-to-fetch/CurlTool.tsx:558` and `:754`
 
 - `npm run dev` and `vite preview` fall back to `index.html` for any path. GitHub Pages does not: it needs the `tools/<slug>.html` and `404.html` files the build writes. Check the built `dist/` when changing routes.
 - `ToolLayout` Backspace goes to `/` unless focus is in an input, textarea, select, or contenteditable, or a modifier key is held.
+- framer-motion 13 hands plain `useTransform(scrollYProgress, ...)` opacity maps to the browser's native scroll timeline, which maps pinned sections wrongly (elements fade back out). Use `useRange` in `Home.tsx` (function-form `useTransform`) for scroll-linked values.
+- Transmissive three.js materials only refract opaque objects; use `alphaTest` instead of `transparent` for anything that should show through the glass.
 - ESLint ignores only `dist` and `node_modules`, and its TS rules apply to `**/*.{ts,tsx}`.
 
 ## Section maps for large files
