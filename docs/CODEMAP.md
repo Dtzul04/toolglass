@@ -1,8 +1,8 @@
 # Toolglass code map
 
-Mapped at commit: `02a69e5` (`main`, 2026-10-18) plus branch `redesign/design-system` (Phases 1 and 2 of `docs/PLAN.md`).
+Mapped at commit: `54025b2` (branch `redesign/tools-migrate`, 2026-10-20, Phase 3 of `docs/PLAN.md`).
 
-Check for drift before trusting this file: `git diff --stat 18d4d8d..HEAD -- src`
+Check for drift before trusting this file: `git diff --stat 54025b2..HEAD -- src`
 
 Numbers in parentheses are line counts. Use them to judge read cost.
 
@@ -22,7 +22,7 @@ index.html
 
 - Routing is `BrowserRouter` with clean URLs (`/tools/<slug>`). `main.tsx` rewrites old `/#/...` links. Hosting is GitHub Pages on `toolglass.ajithakdev.com` (`public/CNAME`); the build writes `tools/<slug>.html` per tool and a `404.html` SPA fallback.
 - Tool data lives in `src/tools/catalog.ts` (plain data: title, description, category, audience, keywords, replaces). `src/tools/registry.tsx` adds icon, tint, and lazy component per slug. Everything (pages, palette, build-time SEO pages, sitemap) reads these; there is no other slug list.
-- Every tool is a default-export component loaded with `React.lazy`. Each tool wraps its own body in `<ToolLayout>`, which reads the slug from the route and renders title, description, icon, back link, and usage count.
+- Every tool is a default-export component loaded with `React.lazy`. Each tool wraps its own body in `<ToolLayout>`, which reads the slug from the route and renders breadcrumb, title, description, icon, favorite and Share actions, a privacy note, usage count, and related tools.
 - Theme: modes Auto/Light/Dark. `data-theme="light|dark"` on `<html>`, set first by an inline script in `index.html` (no flash), then by the shared store in `useTheme`. All colors are CSS variables in `src/index.css`.
 
 ## Files
@@ -63,7 +63,7 @@ index.html
 | `Home.tsx` | Six acts: `Hero` (copy, `HeroSearch`, lazy `GlassScene` with a logo poster until the first frame), `Collapse` (pinned 340vh scene: clutter cards pulled into the glass, then a real toolbar; `CollapseStill` for reduced motion), `ForEveryone` (audience switch + tool cards), `Proof` (live third-party request count), `Ending`. Scroll maps use `useRange` (JS-computed; see Gotchas). |
 | `ToolsHub.tsx` | `/tools`. Search, category chips, audience switch (all in the URL: `q`, `cat`, `for`), favorites rail (drag to reorder), recents rail, grouped grid, empty state linking to a tool request. Has a test. |
 | `About.tsx` | `/about`. Privacy model, live meter, table of everything stored locally with a "clear all" button, open source links. |
-| `ToolPage.tsx` (154) | `Loader` L19-128 (Suspense fallback). `ToolPage` L131-154: unknown slug renders `NotFound`, else `ErrorBoundary > Suspense > Component`. Calls `addRecent(slug)`. |
+| `ToolPage.tsx` (55) | `Loader` L9-30 (skeleton Suspense fallback). `ToolPage` L32-55: unknown slug renders `NotFound`, else `ErrorBoundary > Suspense > Component`. Calls `addRecent(slug)`. |
 | `NotFound.tsx` (377) | Props `attemptedSlug`, `isToolNotFound`. Suggests tools; default suggestions hardcoded at L60 (`timestamp`, `jwt`, `password`). Has a test. |
 
 ### src/components
@@ -75,7 +75,7 @@ index.html
 | `Shell.tsx` | `Shell`, `Kbd`. Sticky glass header (logo, Home/Tools nav with sliding indicator, search, install, theme switch), footer (privacy meter, usage-count opt-out, GitHub). |
 | `Logo.tsx` | Two-pane glass mark; mirrors `public/favicon.svg`. |
 | `PrivacyMeter.tsx` | Live count of requests to other origins via `PerformanceObserver` (Resource Timing). |
-| `ToolLayout.tsx` (129) | Wraps every tool. Takes only `children`. Backspace outside INPUT/TEXTAREA navigates to `/` (L19-31). |
+| `ToolLayout.tsx` (121) | Wraps every tool. Takes only `children`. Breadcrumb, Favorite and Share (copies `currentUrl()`), privacy note (API Tester gets its own wording), related tools. Backspace outside a text field navigates to `/tools`. |
 | `CommandPalette.tsx` (463) | Props `open`, `onClose`. Filters `tools` from registry. Arrow keys, Enter, Escape. |
 | `ErrorBoundary.tsx` (344) | Class component. Optional prop `toolTitle`. Has a test. |
 | `ui/Button.tsx` (92) | `variant`: primary, ghost, soft. `size`: sm, md, lg. `full`. |
@@ -96,7 +96,7 @@ index.html
 | `useTheme.ts` | `useTheme()` returns `{ mode, theme, setMode }`; `setThemeMode(mode)` | Module-level store (`useSyncExternalStore`). Auto is not stored and follows the OS live. Syncs across tabs. Has a test. |
 | `useRecentTools.ts` (30) | returns `{ recents, addRecent }` | Keeps last 3 slugs. |
 | `useToolStats.ts` (74) | `useToolStats(slug?)` returns `{ count, allStats, increment, enabled, toggleTelemetry }` | When disabled, counts are hidden and `increment` does nothing; stored counts are kept. Syncs across components with a `toolglass-telemetry` window event. |
-| `useUrlState.ts` (73) | `useUrlState(key, default, parse, stringify)` returns `[value, setValue]`; `intParam(min, max, fallback)` | Local state updates at once; the URL write is debounced 200 ms with `replace: true`. Re-syncs on external URL changes. Use `intParam` as `parse` for numeric params so crafted links are clamped. Has a test. |
+| `useUrlState.ts` (99) | `useUrlState(key, default, parse, stringify)` returns `[value, setValue]`; `intParam(min, max, fallback)`; `currentUrl()` (page URL with pending writes applied, for Share) | Local state updates at once; the URL write is debounced 200 ms with `replace: true`. Re-syncs on external URL changes. Use `intParam` as `parse` for numeric params so crafted links are clamped. Has a test. |
 
 ### src/tools
 
@@ -120,7 +120,7 @@ Catalog: `catalog.ts` exports `CategoryId`, `Audience`, `CATEGORIES`, `AUDIENCES
 | `color` | `color/ColorTool.tsx` (222) | inline | no | Hex, RGB, HSL. |
 | `regex` | `regex/RegexTool.tsx` (165) | inline | no | |
 | `json-to-ts` | `json-to-ts/JsonToTsTool.tsx` (136) | inline, converter above L86 | no | |
-| `api-tester` | `curl-to-fetch/CurlTool.tsx` (2083) | `curl-to-fetch/curlSecurity.ts` (252) | yes (286) | Largest file. HTTP client, cURL import, saved workflows, history. Section map below. |
+| `api-tester` | `curl-to-fetch/CurlTool.tsx` (35) + parts | `curl-to-fetch/curlSecurity.ts` (252) | yes (286) | HTTP client, cURL import, saved workflows, history. Split into several files; map below. |
 | `qr` | `qr/QrTool.tsx` (109) | `qrcode` package | no | PNG and SVG export. |
 | `markdown` | `markdown/MarkdownTool.tsx` (104) | `marked` + `dompurify` | no | Output is sanitized before render and before "Copy HTML". |
 | `chmod` | `chmod/ChmodTool.tsx` | `chmod.ts` | yes | URL state: `v` (octal). Shell-escapes filenames in the copied command. From PR #93. |
@@ -128,7 +128,7 @@ Catalog: `catalog.ts` exports `CategoryId`, `Audience`, `CATEGORIES`, `AUDIENCES
 
 `curlSecurity.ts` exports: types `HeaderParam`, `SavedRequest`, `HistoryItem`, `SessionAuthData`; `isSensitiveHeader`, `sanitizeHeaders`, `hasAuthCredentials`, `sanitizeSavedRequest`, `sanitizeHistoryItem`, `saveSessionAuth`, `getSessionAuth`, `clearSessionAuth`, `scrubStorageAuth`.
 
-Tests (9 files): `components/ErrorBoundary.test.tsx`, `pages/NotFound.test.tsx`, `hooks/useUrlState.test.tsx`, `tools/nanoid/nanoid.test.ts`, `tools/base64/base64.test.ts`, `tools/curl-to-fetch/curlSecurity.test.ts`, `tools/jwt/jwt.test.ts`, `tools/objectid/objectid.test.ts`, `tools/password/password.test.ts`.
+Tests: 21 files, each `*.test.ts(x)` next to the code it tests. Find them with `find src -name '*.test.*'`.
 
 ## Adding a tool
 
@@ -156,8 +156,8 @@ Tests (9 files): `components/ErrorBoundary.test.tsx`, `pages/NotFound.test.tsx`,
 | `toolglass_stats` | local | `hooks/useToolStats.ts:3` |
 | `toolglass_telemetry_enabled` | local | `hooks/useToolStats.ts:4` |
 | `toolglass_favorites` | local | `hooks/useFavorites.ts` |
-| `toolglass_saved_requests` | local | `tools/curl-to-fetch/curlSecurity.ts:56`, also literal in `CurlTool.tsx` |
-| `toolglass_request_history` | local | `tools/curl-to-fetch/curlSecurity.ts:57`, also literal in `CurlTool.tsx` |
+| `toolglass_saved_requests` | local | `tools/curl-to-fetch/curlSecurity.ts:56`, also literal in `useApiTester.ts` |
+| `toolglass_request_history` | local | `tools/curl-to-fetch/curlSecurity.ts:57`, also literal in `useApiTester.ts` |
 | `tg_ts_history` | local | `tools/timestamp/TimestampTool.tsx:277` |
 | `toolglass_session_credentials` | session | `tools/curl-to-fetch/curlSecurity.ts:58` |
 
@@ -168,17 +168,17 @@ Note the mixed naming: one hyphenated key, one `tg_` prefix, the rest `toolglass
 | Keys | Where | Action |
 |---|---|---|
 | Ctrl/Cmd+K | `App.tsx:202` | Toggle command palette |
-| Backspace | `components/ToolLayout.tsx:21` | Go to `/` when focus is not in INPUT or TEXTAREA |
-| Alt+Z | `tools/curl-to-fetch/CurlTool.tsx:233` | API Tester shortcut |
+| Backspace | `components/ToolLayout.tsx:32` | Go to `/tools` when focus is not in INPUT or TEXTAREA |
+| Alt+Z | `tools/curl-to-fetch/useApiTester.ts:123` | API Tester shortcut |
 
 ## Network
 
-Only `fetch` calls in the app: `tools/curl-to-fetch/CurlTool.tsx:558` and `:754`, both user-initiated requests in the API Tester. Fonts are self-hosted in `src/assets/fonts/` (latin subset) and precached by the service worker.
+Only `fetch` calls in the app: `tools/curl-to-fetch/useApiTester.ts:447` and `:646`, both user-initiated requests in the API Tester. Fonts are self-hosted in `src/assets/fonts/` (latin subset) and precached by the service worker.
 
 ## Gotchas
 
 - `npm run dev` and `vite preview` fall back to `index.html` for any path. GitHub Pages does not: it needs the `tools/<slug>.html` and `404.html` files the build writes. Check the built `dist/` when changing routes.
-- `ToolLayout` Backspace goes to `/` unless focus is in an input, textarea, select, or contenteditable, or a modifier key is held.
+- `ToolLayout` Backspace goes to `/tools` unless focus is in an input, textarea, select, or contenteditable, or a modifier key is held.
 - framer-motion 13 hands plain `useTransform(scrollYProgress, ...)` opacity maps to the browser's native scroll timeline, which maps pinned sections wrongly (elements fade back out). Use `useRange` in `Home.tsx` (function-form `useTransform`) for scroll-linked values.
 - Transmissive three.js materials only refract opaque objects; use `alphaTest` instead of `transparent` for anything that should show through the glass.
 - ESLint ignores only `dist` and `node_modules`, and its TS rules apply to `**/*.{ts,tsx}`.
@@ -187,44 +187,17 @@ Only `fetch` calls in the app: `tools/curl-to-fetch/CurlTool.tsx:558` and `:754`
 
 Read a range with offset and limit instead of the whole file.
 
-### `src/tools/curl-to-fetch/CurlTool.tsx` (2083) — slug `api-tester`
+### `src/tools/curl-to-fetch/` — slug `api-tester`
 
-Module helpers:
+Split in Phase 3 (#64). `CurlTool.tsx` (35) only wires the pieces together.
 
-- L29: `QueryParam` interface
-- L37-85: `parseCurl(curlString)`
-- L87-100: `getNestedValue(obj, path)`
-- L102-124: `getJsonLeafPaths(obj, parentKey)`
-- L126-135: `getMethodColor(m)`
+- `curl.ts` (111, tested in `curl.test.ts`): `QueryParam`, `parseCurl`, `getNestedValue`, `getJsonLeafPaths`, `getMethodColor`
+- `useApiTester.ts` (816): all state and handlers, returns `ApiTester`. Alt+Z handler L123; `fetch` at L447 (quick-run a saved workflow) and L646 (`handleSend`)
+- `RequestPanel.tsx` (282): URL bar, cURL import, params/auth/headers/body tabs, response
+- `WorkflowsPanel.tsx` (99), `HistoryPanel.tsx` (50), `SaveWorkflowDialog.tsx` (85)
+- `parts.tsx` (56): `MethodBadge`, `Notice`, `panelStyle`
 
-Component `CurlTool` starts L137:
-
-- L138-140: `slug` (defaults to `api-tester`), `increment`, `toast`
-- L142-215: state. In order: `method` 142, `url`, `mainTab` 146, `activeTab` 149, `queryParams`, `authType` 155, `bearerToken`, `basicUser`, `basicPass`, `headers` 161, `bodyText`, `curlInput` 170, `isCurlFocused`, `isCopiedResponse`, `response` 174, `loading`, `error`, `lineWrap`, `savedRequests` 188, `requestHistory` 199, `showSaveModal` 210, `saveName`, `saveDescription`, `autoCopyPath`, `saveToSession`, `editingWorkflowId` 215
-- L217-256: effects. `scrubStorageAuth()` on mount L219, Alt+Z key handler L233
-- L258: `handlePasteCurl`
-- L301: `loadRequestConfig` (restores session credentials, L307)
-- L327: `addHistoryItem`, L352: `handleClearHistory`
-- L358: `handleForgetActiveCredentials`, L370: `handleForgetAllSavedCredentials`
-- L395: `handleSaveRequest`, L468: `handleEditWorkflow`, L476: `handleDeleteRequest`, L486: `handleSaveFromHistory`
-- L495-636: `handleQuickRun` (runs a saved workflow, `fetch` at L558, auto-copies a JSON field via `autoCopyPath` near L580)
-- L638: `handleExportWorkflows`, L650: `handleImportWorkflows`
-- L675-792: `handleSend` (URL checks: max 2048 chars and `http(s)://` only, near L687; `fetch` at L754)
-- L794: `addQueryParamRow`, L798: `addHeaderRow`, L802: `handleCopyResponse`, L811: `handleInlineSaveClick`
-
-JSX, L820-2083:
-
-- L822-882: main tab bar. `mainTab` is `testing`, `workflows`, or `history`
-- L884-1457: `testing` tab
-  - L886: URL bar
-  - L924: cURL import bar
-  - L987-1354: request detail tabs. `activeTab`: `params` L1059, `auth` L1171, `headers` L1277, `body` L1341
-  - L1355-1457: response area
-- L1459-1698: `workflows` tab. Card list L1518, stats badge L1573
-- L1700-1815: `history` tab
-- L1816-2083: save/edit workflow modal
-
-Every `localStorage.setItem` for saved requests and history passes through `sanitizeSavedRequest` or `sanitizeHistoryItem`. Keep that when adding a write.
+Every `localStorage.setItem` for saved requests and history in `useApiTester.ts` passes through `sanitizeSavedRequest` or `sanitizeHistoryItem`. Keep that when adding a write.
 
 ### `src/tools/curl-to-fetch/curlSecurity.ts` (252)
 
