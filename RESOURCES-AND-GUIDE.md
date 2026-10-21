@@ -72,6 +72,7 @@ Every link for Toolglass, what it is for, how to contribute, and how to run and 
 - `docs/CODEMAP.md`: architecture, file list, conventions, storage keys, and large file maps
 - `docs/STATE.md`: current work, shipped phases, and next steps
 - `docs/KNOWN-ISSUES.md`: open bugs, testing gaps, and edge cases
+- `docs/PERFORMANCE.md`: Lighthouse scores and what to fix next
 - `docs/PLAN.md`: roadmap, architecture decisions, and design principles
 - `CHANGELOG.md`: version history and release notes
 - `.github/CONTRIBUTING.md`: tool conventions, coding standards, and PR checklist
