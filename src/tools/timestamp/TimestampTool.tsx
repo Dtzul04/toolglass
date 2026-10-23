@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Button } from '../../components/ui/Button';
 import { Field, TextInput, TextArea, Dropdown } from '../../components/ui/Field';
 import { ToolLayout } from '../../components/ToolLayout';
@@ -826,7 +826,7 @@ export default function TimestampTool() {
           {/* COLLAPSIBLE SESSION HISTORY SIDEBAR */}
           <AnimatePresence>
             {historyOpen && (
-              <motion.div
+              <m.div
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: 280, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
@@ -905,7 +905,7 @@ export default function TimestampTool() {
                     <div style={{ textAlign: 'center', color: 'var(--ink-mute)', fontSize: 12, padding: 20 }}>No recent conversions.</div>
                   )}
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>
@@ -924,7 +924,7 @@ export default function TimestampTool() {
                 width: 420,
               }}
             >
-              <motion.div
+              <m.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
@@ -986,7 +986,7 @@ export default function TimestampTool() {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </m.div>
             </div>
           )}
         </AnimatePresence>
