@@ -22,6 +22,7 @@ Redesign, per `docs/PLAN.md`. Site live at https://toolglass.ajithakdev.com with
 
 ## Last session
 
+- 2026-10-24: Merged contributor PR #146 (Color tool aria-labels, closes #140), added changelog line.
 - 2026-10-22: Issue triage. Closed #58, #75, #77, #79 (already shipped). Commented on #67 (drop the Node matrix, keep the Lighthouse budget). Opened #136 for #68 (palette a11y). Filed #137-#145 from a repo scan: cron bugs, clear-data keys, Markdown remote images and CSP, bundle size, docs drift, CI cancel on main.
 - 2026-10-21 (later): Shipped wave 1 (#129, 9 tools plus 1600px layout) and wave 2 (#130, 12 tools), released v1.1.0.
 - 2026-10-21: Merged #127 (end of Phase 3). Triaged all open issues: closed done or duplicate ones (#22, #26, #29-#32, #35, #36, #41, #57, #69), added `wave-2`, `wave-3`, `phase-5`, `later` labels, posted updated file pointers on tool issues, opened #128 for PDF. Devin review trial expired, so PRs get no bot review now.
