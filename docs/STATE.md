@@ -22,6 +22,7 @@ Redesign, per `docs/PLAN.md`. Site live at https://toolglass.ajithakdev.com with
 
 ## Last session
 
+- 2026-10-27: #150 merged (no PRs open). Issue triage: assigned #138 to Dtzul04 (cron part already done in #147); rewrote #67 (Lighthouse budget only) and #143; opened #151 (tests for untested tools). Researched paid/upload-only tools people want free (PDF, images, device checks, calculators) and opened #152-#195 with new labels `wave-4` (everyday, Web APIs only), `needs-dependency`, `aggregator`, `platform`. Suggested order: `wave-4` good first issues, then #191 (PWA, a PLAN goal), then the `pdf-lib` decision (#128 covers #152-#155). Release v1.1.2 still pending.
 - 2026-10-24 (later): Merged #147-#149. #150 open: Markdown remote images + CSP (#142), plus owner-requested UI pass (1200px container, smaller desktop headings, scrollbar-gutter fix, pulsing status dot, glass plate fix, no poster flash on return to Home). Next: owner merges #150, then release v1.1.2 (first tag deploy). Then #145, #143, #138, Phase 5 (#66, #67), wave-3 tools.
 - 2026-10-24: Merged #136. Opened #147 (cron, clear-data, deploy-cancel fixes), #148 (deploy only on release tags; weekly Sunday release), #149 (upfront JS 161 to 131 KB gzip). All green, waiting for the owner's merge. After merging, release v1.1.2 (it also tests the tag deploy).
 - 2026-10-24: Merged contributor PR #146 (Color tool aria-labels, closes #140), added changelog line.
