@@ -16,7 +16,68 @@ const unknown: UserAgentInfo = {
   bot: false,
 };
 
-/** Reads a user-agent string. Rules come later; every input is unknown for now. */
-export function parseUserAgent(_input: string): UserAgentInfo {
-  return { ...unknown };
+interface BrowserRule {
+  name: string;
+  re: RegExp;
+  engine: string;
+}
+
+// More specific products come first. Edge, Opera, and Samsung Internet also contain "Chrome".
+// Chrome also contains "Safari", so Safari is only the Version/…Safari form.
+const browserRules: BrowserRule[] = [
+  { name: 'Samsung Internet', re: /SamsungBrowser\/([\d.]+)/, engine: 'Blink' },
+  { name: 'Edge', re: /Edg(?:e|A|iOS)?\/([\d.]+)/, engine: 'Blink' },
+  { name: 'Opera', re: /(?:OPR|Opera)\/([\d.]+)/, engine: 'Blink' },
+  { name: 'Chrome', re: /(?:Chrome|CriOS)\/([\d.]+)/, engine: 'Blink' },
+  { name: 'Firefox', re: /(?:Firefox|FxiOS)\/([\d.]+)/, engine: 'Gecko' },
+  { name: 'Safari', re: /Version\/([\d.]+).*Safari\//, engine: 'WebKit' },
+  { name: 'Googlebot', re: /Googlebot\/([\d.]+)/, engine: 'unknown' },
+  { name: 'Bingbot', re: /bingbot\/([\d.]+)/, engine: 'unknown' },
+  { name: 'curl', re: /curl\/([\d.]+)/, engine: 'unknown' },
+];
+
+function firstMatch(ua: string, re: RegExp): string | null {
+  return re.exec(ua)?.[1] ?? null;
+}
+
+function readOs(ua: string): string {
+  const ios = firstMatch(ua, /(?:CPU (?:iPhone )?OS |CPU OS )([\d_]+)/);
+  if (ios) return `iOS ${ios.replace(/_/g, '.')}`;
+  const android = firstMatch(ua, /Android ([\d.]+)/);
+  if (android) return `Android ${android}`;
+  if (/Android/.test(ua)) return 'Android';
+  if (/Windows NT/.test(ua)) return 'Windows';
+  const mac = firstMatch(ua, /Mac OS X ([\d._]+)/);
+  if (mac) return `macOS ${mac.replace(/_/g, '.')}`;
+  if (/CrOS/.test(ua)) return 'ChromeOS';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'unknown';
+}
+
+function readDevice(ua: string, os: string): string {
+  if (/iPad|Tablet/i.test(ua)) return 'tablet';
+  if (/iPhone|iPod|Mobile/i.test(ua)) return 'mobile';
+  if (os === 'Windows' || os.startsWith('macOS') || os === 'Linux' || os === 'ChromeOS') return 'desktop';
+  return 'unknown';
+}
+
+/** Read browser, version, engine, OS, device, and whether the client looks like a bot. */
+export function parseUserAgent(input: string): UserAgentInfo {
+  const ua = input.trim();
+  if (!ua) return { ...unknown };
+
+  const info: UserAgentInfo = { ...unknown };
+  for (const rule of browserRules) {
+    const version = firstMatch(ua, rule.re);
+    if (!version) continue;
+    info.browser = rule.name;
+    info.version = version;
+    info.engine = rule.engine;
+    break;
+  }
+
+  info.os = readOs(ua);
+  info.device = readDevice(ua, info.os);
+  info.bot = /bot|spider|crawl|slurp|\bcurl\/|wget/i.test(ua);
+  return info;
 }
